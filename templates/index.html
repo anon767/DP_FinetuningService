@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finetune Chatbot Model</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>  <!-- Load TensorFlow.js -->
+    <script src="static/index.js"></script>  <!-- Load TensorFlow.js -->
+</head>
+<body>
+<h1>Finetune Hugging Face Chatbot Model</h1>
+
+<div>
+    <label for="model">Select a model:</label>
+    <select name="model" id="model">
+        <option value="gpt2">gpt2</option>
+        <option value="microsoft/DialoGPT-medium">microsoft/DialoGPT-medium</option>
+        <option value="facebook/blenderbot-400M-distill">facebook/blenderbot-400M-distill</option>
+    </select>
+</div>
+
+<div>
+    <label for="fileInput">Upload your prompt file (Max 20MB):</label>
+    <input type="file" id="fileInput" required>
+</div>
+
+<br>
+
+<button id="uploadButton">Upload and Perturb</button>
+
+
+</body>
+</html>

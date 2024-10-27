@@ -1,0 +1,7 @@
+Flask
+Flask-WTF
+wtforms
+gensim
+numpy
+tensorflow
+tensorflowjs
