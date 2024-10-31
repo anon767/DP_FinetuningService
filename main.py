@@ -2,6 +2,7 @@ import json
 
 import gensim
 from flask import Flask, render_template, request, redirect, url_for, jsonify
+from keras.src.constraints import Constraint
 from werkzeug.utils import secure_filename
 import os
 import numpy as np
@@ -24,15 +25,38 @@ available_models = [
     'facebook/blenderbot-400M-distill'
 ]
 
+
 # Load the custom TensorFlow Word2Vec model
-word2vec_model = tf.keras.models.load_model('word2vec_model')
+# Define and register ClipConstraint
+@tf.keras.utils.register_keras_serializable()
+class ClipConstraint(Constraint):
+    def __call__(self, weights):
+        return tf.clip_by_value(weights, -1, 1)
+
+
 
 # Load the word mappings
-with open('word_index.json', 'r') as f:
+with open('static/word_index.json', 'r') as f:
     word_index = json.load(f)
 
-with open('index_word.json', 'r') as f:
+with open('static/index_word.json', 'r') as f:
     index_word = json.load(f)
+
+# Model parameters (adjust these based on your original setup)
+vocab_size = len(index_word)+1  # replace with your actual vocab size
+embedding_dim = 50  # replace with your actual embedding dimension
+
+# Define the model architecture
+word2vec_model = tf.keras.Sequential([
+    tf.keras.layers.Embedding(input_dim=vocab_size, output_dim=embedding_dim, embeddings_constraint=ClipConstraint()),
+    tf.keras.layers.Reshape((embedding_dim,))
+])
+word2vec_model.build(input_shape=(None, 1))
+
+# Load weights from the checkpoint
+checkpoint_filepath = 'scripts/checkpoint.model.keras'
+word2vec_model.load_weights(checkpoint_filepath)
+
 
 
 @app.route('/finetune', methods=['POST'])
@@ -44,7 +68,7 @@ def finetune():
     nearest_words = []
 
     for item in perturbed_vectors:
-        perturbed_vector = np.array(item['vector'])  # Convert the vector to a numpy array
+        perturbed_vector = np.array(item)  # Convert the vector to a numpy array
 
         # Use the TensorFlow model to get the nearest word for each perturbed vector
         nearest_word = find_nearest_word(perturbed_vector)

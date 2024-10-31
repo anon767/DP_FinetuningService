@@ -1,12 +1,26 @@
 let model;
+let vocab = {};  // Store the word-index mapping here
 
 // Load the custom Word2Vec model from TensorFlow.js format
 async function loadModel() {
     model = await tf.loadGraphModel('/static/model.json');
+    console.log('Model Inputs:', model.inputs);
+    console.log('Model Outputs:', model.outputs);
     console.log('Custom Word2Vec model loaded');
 }
 
-loadModel();  // Load the Word2Vec model when the page loads
+
+// Load the vocabulary index
+async function loadVocab() {
+    const response = await fetch('/static/word_index.json');
+    vocab = await response.json();
+    console.log('Vocabulary loaded');
+}
+
+// Call both model and vocab loading functions
+loadModel();
+loadVocab();
+
 
 document.getElementById('uploadButton').addEventListener('click', async function () {
     const fileInput = document.getElementById('fileInput');
@@ -50,7 +64,7 @@ async function perturbText(text) {
     for (const word of words) {
         const wordIndex = await getWordEmbedding(word);  // Get word embedding
         const perturbedVector = perturbVector(wordIndex);  // Perturb the vector
-        perturbedVectors.push({ word, vector: perturbedVector });
+        perturbedVectors.push( perturbedVector);
     }
 
     return perturbedVectors;
@@ -58,14 +72,15 @@ async function perturbText(text) {
 
 // Get the embedding for a word using the loaded model
 async function getWordEmbedding(word) {
-    const inputTensor = tf.tensor([[word]]);  // Prepare input tensor (you'll need to encode words to indices if not already done)
-    const embedding = await model.executeAsync(inputTensor);  // Get the embedding
+    const wordIndex = vocab[word] || vocab['UNK'];  // Use 'UNK' if the word is not in vocab
+    const inputTensor = tf.tensor([[wordIndex]]);  // Ensure dtype is int32
+    const embedding = await model.executeAsync({ ["keras_tensor"]: inputTensor });
     return embedding.arraySync()[0];  // Convert tensor to array
 }
 
 // Perturb word vectors with Laplacian noise
 function perturbVector(vector) {
-    const noiseScale = 0.1;
+    const noiseScale = 10;
     return vector.map(v => v + laplacianNoise(noiseScale));
 }
 

@@ -25,7 +25,7 @@ Furthermore the parameters are:
 - AdamW with weight Decay for fast second-order learning but interpretable embeddings
 - 50 dimensions (Needs to be fast for Inference on Browser)
 - Embedding clipped to [-1, 1] for calculating Epsilon
-- Windows size of 5 and 5 negative samples for Noise Contrastive Loss
+- Windows size of 5 and 8 negative samples for Noise Contrastive Loss
 
 We choose to use a laplace mechanism with an Epsilon of 0.1 which result in a per-sample Epsilon of 20.
 

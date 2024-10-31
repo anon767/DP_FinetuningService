@@ -50,10 +50,10 @@ filtered_word_index = dict(list(filtered_word_index.items())[:max_vocab_size])
 index_word = {index: word for word, index in filtered_word_index.items()}
 
 # Save the filtered word_index and index_word mappings
-with open('word_index.json', 'w') as f:
+with open('../static/word_index.json', 'w') as f:
     json.dump(filtered_word_index, f)
 
-with open('index_word.json', 'w') as f:
+with open('../static/index_word.json', 'w') as f:
     json.dump(index_word, f)
 
 vocab_size = len(filtered_word_index) + 1  # Adjusted vocabulary size based on the filtered words
@@ -84,7 +84,7 @@ for seq in sequences:
 X_train = np.array(X_train)
 y_train = np.array(y_train)
 # Define Noise Contrastive Estimation loss function
-embedding_dim = 50
+embedding_dim = 100
 nce_weights = tf.Variable(tf.random.normal([vocab_size, embedding_dim]))
 nce_biases = tf.Variable(tf.zeros([vocab_size]))
 
@@ -96,7 +96,7 @@ def nce_loss(y_true, y_pred):
         biases=nce_biases,
         labels=tf.reshape(y_true, [-1, 1]),
         inputs=y_pred,
-        num_sampled=5,
+        num_sampled=16,
         num_classes=vocab_size
     )
     return tf.reduce_mean(loss)
@@ -107,16 +107,14 @@ class ClipConstraint(Constraint):
         return tf.clip_by_value(weights, -1, 1)
 
 # Define Word2Vec-like model
-
 model = tf.keras.Sequential([
     tf.keras.layers.Embedding(input_dim=vocab_size, output_dim=embedding_dim, embeddings_constraint=ClipConstraint()),
     tf.keras.layers.Reshape((embedding_dim,))
 ])
 
-# Define SGD optimizer with momentum
 optimizer = tf.keras.optimizers.AdamW(
-    learning_rate=0.001,
-    weight_decay=0.00001
+    learning_rate=0.0001,
+    weight_decay=0.000001
 )
 
 model.compile(optimizer=optimizer, loss=nce_loss)
