@@ -27,21 +27,68 @@ Furthermore the parameters are:
 - Embedding clipped to [-1, 1] for calculating Epsilon
 - Windows size of 5 and 8 negative samples for Noise Contrastive Loss
 
-We choose to use a laplace mechanism with an Epsilon of 0.1 which result in a per-sample Epsilon of 20.
+We choose to use either a Laplacian or Gaussian mechanism. In few experiments Gaussian seem to work better.
+Since the global sensitivity is two (given the embedding range) and the noise standrad deviation is 0.1 we have a LDP epsilon of: 96.9.
+(Assuming a delta of 10^-5)
 
-Building the model:
+Example
+Input-text:
 ```commandline
-pip3 install -r requirements.txt
-python3 scripts/word2vec.py
+Harry Potter was a highly unusual boy in many ways.
+He was always the last to be picked for any sports team.
+He was born a wizard, and his life changed forever when he received a letter from Hogwarts.
+Harry couldn't believe that he was going to a school for wizards.
+"You're a wizard, Harry," said Hagrid, as he handed him the letter.
+The scar on his forehead, shaped like a lightning bolt, marked him as someone special.
+Voldemort, the dark wizard, had tried to kill Harry when he was just a baby.
+Ron Weasley and Hermione Granger quickly became Harry's best friends.
+The trio went on many adventures, from discovering secret rooms to battling dark forces.
+At Hogwarts, Harry learned the importance of friendship, courage, and loyalty.
+```
+Output-Text
+```commandline
+harry potter c by highly unusual boy a many ways
+there on always the last of be picked upon any sports team
+even city born no wizard work was life changed forever as modern received an letter up censoring
+harry handloading believe head he then going general york school an wizards guillotin strong wizard
+rolex had outscored as a handed him rather arts best precocial model his bachs shaped like an lightning reproduction
+marked him religious someone special naslund non dark wizard had tried to kill harry when up c just a baby ron
+simplify information lochaber arresting quickly became mallard best friends the iroquoian went on standard adventures
+than refereeing secret rooms has pi dark both for gaspard harry learned main importance series friendship courage and loyalty
 ```
 
-Transform to GraphModel for JS:
+### CDP
+
+In case the model needs to be distributed and to save the potential sensitive training data from leaking,
+we use Gaussian mechanism to perturb the gradients during fine-tuning.
+We use gradient clipping of 1 and noise of 0.1 arriving at an Epsilon of 48.45 (assuming the same Delta).
+
+## Building the model:
+Train the word2vec model for transfer sensitive data:
 ```commandline
-tensorflowjs_converter --input_format=tf_saved_model --output_format=tfjs_graph_model scripts/word2vec_model_full.h5 statc/
+pip3 install -r requirements.txt
+cd scripts
+python3 word2vec.py
+```
+
+Store the model and save it as JS digestible Tensorflow artifacts (graph-model)
+```commandline
+cd scripts
+chmod +x build.sh
+./build.sh
 ```
 
 ## Finetuning
 
-- Low Rank Adaption: We freeze all layers and add low-rank adapters
-- We use DPSGD during training
-- We use AWS Lambda functions for on-the-fly Async finetuning
+- TODO: Low Rank Adaption: We freeze all layers and add low-rank adapters
+- TODO: We use AWS Lambda functions for on-the-fly Async finetuning
+- TODO: Instead of W2V, use pre-trained BPE tokenizer and fine-tune on LDP
+### Run
+
+You can simple start the server with:
+```commandline
+pip3 -r requirements.txt
+python3 main.py
+```
+
+Choose a huggingface model to fine-tune and upload an example corpus.

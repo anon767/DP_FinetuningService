@@ -20,12 +20,12 @@ with open('../static/index_word.json', 'r') as f:
 
 # Model parameters (adjust these based on your original setup)
 vocab_size = len(index_word)+1  # replace with your actual vocab size
-embedding_dim = 50  # replace with your actual embedding dimension
+embedding_dim = 100  # replace with your actual embedding dimension
 
 # Define the model architecture
 model = tf.keras.Sequential([
-    tf.keras.layers.Embedding(input_dim=vocab_size, output_dim=embedding_dim),
-    tf.keras.layers.Reshape((embedding_dim,))
+    tf.keras.layers.Embedding(input_dim=vocab_size, output_dim=embedding_dim,  dtype=tf.float32)),
+    tf.keras.layers.Reshape((embedding_dim,), name="embedding_output")
 ])
 model.build(input_shape=(None, 1))
 

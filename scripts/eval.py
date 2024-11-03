@@ -46,8 +46,9 @@ def evaluate(model, eval_indices, index_word, top_k=8):
     all_embeddings = model.layers[0].get_weights()[0]
     for i, eval_embedding in enumerate(eval_embeddings):
         similarities = np.array([cosine_similarity(eval_embedding, embedding) for embedding in all_embeddings])
-        nearest = (-similarities).argsort()[1:top_k + 1]
+        nearest = (-similarities).argsort()[:top_k + 1]
         nearest_words = [index_word[str(idx)] for idx in nearest]
+        print(f"{all_embeddings[nearest[0]]}")
         print(f'"{eval_words[i]}" nearest neighbors: {", ".join(nearest_words)}')
 
 evaluate(model, eval_indices, index_word, 10)

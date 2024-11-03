@@ -1,5 +1,6 @@
 let model;
 let vocab = {};  // Store the word-index mapping here
+const embedding_dim = 100;
 
 // Load the custom Word2Vec model from TensorFlow.js format
 async function loadModel() {
@@ -70,19 +71,40 @@ async function perturbText(text) {
     return perturbedVectors;
 }
 
-// Get the embedding for a word using the loaded model
+function clean(word) {
+    return word.toLowerCase().replace(",","").replace(".","").trim();
+}
+
 async function getWordEmbedding(word) {
-    const wordIndex = vocab[word] || vocab['UNK'];  // Use 'UNK' if the word is not in vocab
-    const inputTensor = tf.tensor([[wordIndex]]);  // Ensure dtype is int32
-    const embedding = await model.executeAsync({ ["keras_tensor"]: inputTensor });
-    return embedding.arraySync()[0];  // Convert tensor to array
+    let cleaned_word = clean(word);
+    const wordIndex = vocab[cleaned_word] || vocab['UNK'];  // Use 'UNK' if the word is not in vocab
+    const inputTensor =  tf.tensor2d([[wordIndex]], [1, 1], 'int32').toFloat();  // Shape it as [1, 1]
+    const embedding = await model.executeAsync({ "keras_tensor": inputTensor });
+    return embedding.arraySync()[0];  // Convert tensor to array and retrieve the embedding
 }
 
 // Perturb word vectors with Laplacian noise
+/*
 function perturbVector(vector) {
-    const noiseScale = 10;
+    const noiseScale = 0.02;
     return vector.map(v => v + laplacianNoise(noiseScale));
 }
+*/
+
+function perturbVector(vector) {
+    const stdDev = 0.1;
+    return vector.map(v => v + gaussianNoise(stdDev));
+}
+
+// Generate Gaussian noise
+function gaussianNoise(stdDev) {
+    // Using Box-Muller transform to generate Gaussian noise
+    const u1 = Math.random();
+    const u2 = Math.random();
+    const z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+    return z0 * stdDev;
+}
+
 
 // Generate Laplacian noise
 function laplacianNoise(scale) {

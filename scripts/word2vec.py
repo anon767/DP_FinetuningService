@@ -62,7 +62,7 @@ vocab_size = len(filtered_word_index) + 1  # Adjusted vocabulary size based on t
 tokenizer.word_index = filtered_word_index  # Use filtered word index for tokenization
 sequences = tokenizer.texts_to_sequences(sentences)
 # Padding sequences to ensure equal length
-max_length = 64
+max_length = 164
 sequences = pad_sequences(sequences, maxlen=max_length, padding='post')
 
 # Prepare training data (target context word and surrounding words)
@@ -108,13 +108,12 @@ class ClipConstraint(Constraint):
 
 # Define Word2Vec-like model
 model = tf.keras.Sequential([
-    tf.keras.layers.Embedding(input_dim=vocab_size, output_dim=embedding_dim, embeddings_constraint=ClipConstraint()),
+    tf.keras.layers.Embedding(input_dim=vocab_size, output_dim=embedding_dim, embeddings_constraint=ClipConstraint(),  dtype=tf.int32)),
     tf.keras.layers.Reshape((embedding_dim,))
 ])
 
 optimizer = tf.keras.optimizers.AdamW(
     learning_rate=0.0001,
-    weight_decay=0.000001
 )
 
 model.compile(optimizer=optimizer, loss=nce_loss)

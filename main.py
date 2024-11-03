@@ -8,6 +8,13 @@ import os
 import numpy as np
 import gensim.downloader as api
 import tensorflow as tf
+from transformers import AutoTokenizer, AutoModelForCausalLM, Trainer, TrainingArguments
+from datasets import Dataset
+from opacus import PrivacyEngine
+from torch.utils.data import DataLoader
+from torch.optim import AdamW
+from tqdm import tqdm
+import torch
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = './uploads'
@@ -34,7 +41,6 @@ class ClipConstraint(Constraint):
         return tf.clip_by_value(weights, -1, 1)
 
 
-
 # Load the word mappings
 with open('static/word_index.json', 'r') as f:
     word_index = json.load(f)
@@ -43,12 +49,12 @@ with open('static/index_word.json', 'r') as f:
     index_word = json.load(f)
 
 # Model parameters (adjust these based on your original setup)
-vocab_size = len(index_word)+1  # replace with your actual vocab size
-embedding_dim = 50  # replace with your actual embedding dimension
+vocab_size = len(index_word) + 1  # replace with your actual vocab size
+embedding_dim = 100  # replace with your actual embedding dimension
 
 # Define the model architecture
 word2vec_model = tf.keras.Sequential([
-    tf.keras.layers.Embedding(input_dim=vocab_size, output_dim=embedding_dim, embeddings_constraint=ClipConstraint()),
+    tf.keras.layers.Embedding(input_dim=vocab_size, output_dim=embedding_dim),
     tf.keras.layers.Reshape((embedding_dim,))
 ])
 word2vec_model.build(input_shape=(None, 1))
@@ -58,12 +64,28 @@ checkpoint_filepath = 'scripts/checkpoint.model.keras'
 word2vec_model.load_weights(checkpoint_filepath)
 
 
+def cosine_similarity(a, b):
+    dot_product = np.dot(b, a)
+    norm_a = np.linalg.norm(a)
+    norm_b = np.linalg.norm(b, axis=1)
+    return dot_product / (norm_a * norm_b)
+
+def collate_fn(batch):
+    return {
+        "input_ids": torch.stack([torch.tensor(item["input_ids"]) for item in batch]),
+        "attention_mask": torch.stack([torch.tensor(item["attention_mask"]) for item in batch]),
+        "labels": torch.stack([torch.tensor(item["labels"]) for item in batch]),
+    }
 
 @app.route('/finetune', methods=['POST'])
 def finetune():
     # Get the perturbed vectors from the request (JSON formatted)
     perturbed_vectors = request.form.get('perturbedVectors')
     perturbed_vectors = json.loads(perturbed_vectors)  # Safely parse JSON string to list of dicts
+    epochs = 2
+    noise_multiplier = 0.1
+    max_grad_norm = 1.0
+    batch_size = 2
 
     nearest_words = []
 
@@ -76,9 +98,60 @@ def finetune():
         nearest_words.append(nearest_word)
 
     # Combine the nearest words back into a sentence or text
-    result_text = ' '.join(nearest_words)
+    perturbed_text = ' '.join(nearest_words)
 
-    return jsonify({"perturbed_text": result_text})
+    selected_model = request.form.get('model')
+
+    # Load the tokenizer and model from Hugging Face
+    tokenizer = AutoTokenizer.from_pretrained(selected_model)
+    tokenizer.pad_token = tokenizer.eos_token
+    model = AutoModelForCausalLM.from_pretrained(selected_model)
+
+    # Tokenize the perturbed text
+    inputs = tokenizer(perturbed_text, return_tensors="pt", truncation=True, padding=True)
+    inputs["labels"] = inputs["input_ids"].clone()  # Set labels as input_ids for next-token prediction
+
+    # Prepare the dataset and DataLoader
+    dataset = Dataset.from_dict({
+        "input_ids": inputs["input_ids"],
+        "attention_mask": inputs["attention_mask"],
+        "labels": inputs["labels"]
+    })
+    dataloader = DataLoader(dataset, batch_size=batch_size, collate_fn=collate_fn)
+
+    # Initialize optimizer
+    optimizer = AdamW(model.parameters(), lr=5e-5)
+    model.train()
+
+    # Set up Opacus PrivacyEngine for DPSGD
+    privacy_engine = PrivacyEngine()
+    model, optimizer, dataloader = privacy_engine.make_private(module=model,
+                                                               optimizer=optimizer,
+                                                               data_loader=dataloader,
+                                                               noise_multiplier=noise_multiplier,
+                                                               max_grad_norm=max_grad_norm
+                                                               )
+
+    for epoch in range(epochs):
+        epoch_loss = 0.0
+        for batch in tqdm(dataloader, desc=f"Epoch {epoch + 1}/{epochs}"):
+            optimizer.zero_grad()
+            outputs = model(
+                input_ids=batch["input_ids"],
+                attention_mask=batch["attention_mask"],
+                labels=batch["labels"]
+            )
+            loss = outputs.loss
+            loss.backward()
+            optimizer.step()
+            epoch_loss += loss.item()
+        print(f"Epoch {epoch + 1} Loss: {epoch_loss / len(dataloader)}")
+
+    # Save the fine-tuned model
+    model._module.save_pretrained("./fine_tuned_model")
+    tokenizer.save_pretrained("./fine_tuned_model")
+
+    return jsonify({"perturbed_text": perturbed_text})
 
 
 def find_nearest_word(perturbed_vector):
@@ -86,16 +159,14 @@ def find_nearest_word(perturbed_vector):
     Find the nearest word for a given perturbed vector using the Word2Vec TensorFlow model.
     """
     # Get all word embeddings from the model (assumed that you have the embeddings as part of your model)
-    all_word_embeddings = word2vec_model.get_layer('embedding').get_weights()[0]
+    all_word_embeddings = word2vec_model.get_layer('embedding').get_weights()[0]  # Shape: (vocab_size, embedding_dim)
 
     # Compute cosine similarity between the perturbed vector and all word embeddings
-    similarity = tf.keras.losses.cosine_similarity(perturbed_vector, all_word_embeddings)
+    similarity = cosine_similarity(perturbed_vector, all_word_embeddings)
 
-    # Find the index of the most similar word
-    nearest_word_index = tf.argmax(similarity).numpy()
-
-    # Retrieve the word corresponding to the index
-    nearest_word = index_word[str(nearest_word_index)]
+    # Find the index of the nearest word
+    nearest_index = np.argmax(similarity)
+    nearest_word = index_word.get(str(nearest_index), "UNK")
 
     return nearest_word
 

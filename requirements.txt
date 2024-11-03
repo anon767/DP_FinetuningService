@@ -5,3 +5,8 @@ gensim
 numpy
 tensorflow
 tensorflowjs
+transformers
+datasets
+torch
+accelerate
+opacus
