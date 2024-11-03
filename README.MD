@@ -1,22 +1,16 @@
 # DP Finetuning Service
 
-This repositorty contains the code to generate a finetuning service which yields data anonymization during transfer and 
-outputs a privacy preserving finetuned (text-based) Model through differentially private mechanisms.
+This repository contains the code to create a fine-tuning service that ensures data anonymization during transfer and produces a privacy-preserving, fine-tuned text model using differential privacy mechanisms.
 
 ## Datatransfer
 
-Usually, the data scientist requires the data of the data owner (Do), thus requiring the potentially sensitive data to leave the DO's premises.
-Using a Local Differentially Private (LDP) Mechanism we can circumvent the problem of data leakage.
+Typically, data scientists need access to a data owner's (DO) data, which often requires transferring potentially sensitive information outside the DO's premises. By applying a Local Differentially Private (LDP) mechanism, we can prevent data leakage during transfer.
 
-For finetuning most LLMs we do not require much data thus we can simply assume a max of 20MB text file for the start.
-We need this data to be moved to our premises without us being aware of the content but still be able to finetune a model. 
-Typical alternatives include:
-- Homomorphic encryption (Slow)
-- Trusted Computing Environments (Allow Sidechannel attacks)
+For most large language models (LLMs), fine-tuning requires only a small amount of data. We start with a 20MB text file limit for uploaded data, which is transferred without revealing the original content. Common alternatives, such as homomorphic encryption (which is slow) or trusted computing environments (which can be vulnerable to side-channel attacks), present limitations.
 
-Instead, we apply a Word2Vec embedding model and perturb the data on the Client (DO) premises. This can be done by leveraging tensorflow.js on the clients browser.
-That means, the client itself perturbs the data such that we do not receive the original ones.
-At serverside, we reconstruct the perturbed one losing all sensitive information.
+Instead, we apply a Word2Vec (W2V) embedding model and perturb the data directly on the client (DO) side using TensorFlow.js in the browser. This approach ensures that only perturbed data is received by the server, retaining all sensitive information on the client side.
+
+
 
 ### LDP
 
@@ -27,11 +21,11 @@ Furthermore the parameters are:
 - Embedding clipped to [-1, 1] for calculating Epsilon
 - Windows size of 5 and 8 negative samples for Noise Contrastive Loss
 
-We choose to use either a Laplacian or Gaussian mechanism. In few experiments Gaussian seem to work better.
-Since the global sensitivity is two (given the embedding range) and the noise standrad deviation is 0.1 we have a LDP epsilon of: 96.9.
-(Assuming a delta of 10^-5)
+We apply either a Laplacian or Gaussian noise mechanism; initial experiments show Gaussian noise performs better. With an embedding range of two (global sensitivity) and a noise standard deviation of 0.1, our LDP epsilon value is approximately 96.9 (assuming delta = 10^-5).
 
-Example
+
+
+Example of perturbation
 Input-text:
 ```commandline
 Harry Potter was a highly unusual boy in many ways.
@@ -45,7 +39,7 @@ Ron Weasley and Hermione Granger quickly became Harry's best friends.
 The trio went on many adventures, from discovering secret rooms to battling dark forces.
 At Hogwarts, Harry learned the importance of friendship, courage, and loyalty.
 ```
-Output-Text
+Perturbed Output-Text
 ```commandline
 harry potter c by highly unusual boy a many ways
 there on always the last of be picked upon any sports team
@@ -59,9 +53,7 @@ than refereeing secret rooms has pi dark both for gaspard harry learned main imp
 
 ### CDP
 
-In case the model needs to be distributed and to save the potential sensitive training data from leaking,
-we use Gaussian mechanism to perturb the gradients during fine-tuning.
-We use gradient clipping of 1 and noise of 0.1 arriving at an Epsilon of 48.45 (assuming the same Delta).
+To protect sensitive information in models from leaking during inference, we use a Gaussian mechanism to perturb gradients during fine-tuning. By clipping gradients at 1 and adding noise with a standard deviation of 0.1, we achieve an epsilon of approximately 48.45 (assuming delta = 10^-5).
 
 ## Building the model:
 Train the word2vec model for transfer sensitive data:
