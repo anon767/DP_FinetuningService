@@ -108,7 +108,7 @@ class ClipConstraint(Constraint):
 
 # Define Word2Vec-like model
 model = tf.keras.Sequential([
-    tf.keras.layers.Embedding(input_dim=vocab_size, output_dim=embedding_dim, embeddings_constraint=ClipConstraint(),  dtype=tf.int32)),
+    tf.keras.layers.Embedding(input_dim=vocab_size, output_dim=embedding_dim, embeddings_constraint=ClipConstraint()),
     tf.keras.layers.Reshape((embedding_dim,))
 ])
 
