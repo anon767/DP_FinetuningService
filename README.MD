@@ -1,4 +1,5 @@
 # DP Finetuning Service
+*WIP*
 
 This repository contains the code to create a fine-tuning service that ensures data anonymization during transfer and produces a privacy-preserving, fine-tuned text model using differential privacy mechanisms.
 
