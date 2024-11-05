@@ -15,6 +15,8 @@ from torch.utils.data import DataLoader
 from torch.optim import AdamW
 from tqdm import tqdm
 import torch
+from peft import get_peft_model, LoraConfig, TaskType
+import torch.nn as nn
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = './uploads'
@@ -106,7 +108,25 @@ def finetune():
     tokenizer = AutoTokenizer.from_pretrained(selected_model)
     tokenizer.pad_token = tokenizer.eos_token
     model = AutoModelForCausalLM.from_pretrained(selected_model)
+    # Configure LoRA
+    lora_compatible_modules = []
 
+    # Check each module in the model
+    for name, module in model.named_modules():
+        # Check if the module is a type supported by LoRA
+        if isinstance(module, (nn.Linear, nn.Conv2d)) or \
+                (hasattr(nn, "Conv1D") and isinstance(module, nn.Conv1d)):
+            lora_compatible_modules.append(name)
+
+    print("Compatible modules for LoRA:", lora_compatible_modules)
+    lora_config = LoraConfig(
+        r=16,  # Low-rank dimension
+        lora_alpha=16,  # Alpha scaling factor
+        target_modules=lora_compatible_modules,  # List of compatible modules
+        task_type=TaskType.CAUSAL_LM,
+    )
+    # Apply LoRA to the model
+    model = get_peft_model(model, lora_config)
     # Tokenize the perturbed text
     inputs = tokenizer(perturbed_text, return_tensors="pt", truncation=True, padding=True)
     inputs["labels"] = inputs["input_ids"].clone()  # Set labels as input_ids for next-token prediction

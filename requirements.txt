@@ -10,3 +10,4 @@ datasets
 torch
 accelerate
 opacus
+peft

@@ -126,7 +126,7 @@ model_checkpoint_callback = keras.callbacks.ModelCheckpoint(
     mode='min',
     save_best_only=True)
 
-model.fit(X_train, y_train, epochs=100, verbose=1, batch_size=128, callbacks=[model_checkpoint_callback])
+model.fit(X_train, y_train, epochs=150, verbose=1, batch_size=128, callbacks=[model_checkpoint_callback])
 model.save('word2vec_model_full.h5')
 
 eval_words = ['five', 'of', 'going', 'hardware', 'american', 'britain']

@@ -72,7 +72,9 @@ chmod +x build.sh
 
 ## Finetuning
 
-- TODO: Low Rank Adaption: We freeze all layers and add low-rank adapters
+We are using Low-Rank adaption (LoRA) for fast fine-tuning and to make sure only our newly added weights are perturbed.
+This preserves the initial performance of the model.
+
 - TODO: We use AWS Lambda functions for on-the-fly Async finetuning
 - TODO: Instead of W2V, use pre-trained BPE tokenizer and fine-tune on LDP
 ### Run
