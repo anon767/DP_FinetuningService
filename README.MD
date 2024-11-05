@@ -1,7 +1,17 @@
 # DP Finetuning Service
-*WIP*
 
 This repository contains the code to create a fine-tuning service that ensures data anonymization during transfer and produces a privacy-preserving, fine-tuned text model using differential privacy mechanisms.
+
+## Business Explanation
+
+### Industry Overview:
+With the rise of data privacy laws like GDPR and CCPA, companies face increased scrutiny on data handling practices. The demand for privacy-preserving AI models is growing, especially in highly regulated industries. Despite this demand, many businesses lack the in-house expertise to implement differential privacy for model fine-tuning.
+
+### Unique Selling Proposition (USP):
+PrivyTune is one of the few solutions offering client-side anonymization combined with server-side privacy-preserving fine-tuning. Our unique approach ensures minimal data exposure and compliance with privacy regulations.
+
+### Vision Statement:
+To lead the market in differential privacy solutions by offering easy-to-use, compliant, and secure fine-tuning for AI models.
 
 ## Datatransfer
 
